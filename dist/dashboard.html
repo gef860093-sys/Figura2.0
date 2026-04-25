@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BigAvatar Cloud — Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #161b24;
+    --surface2: #1e2535;
+    --border: #2a3347;
+    --text: #e2e8f0;
+    --muted: #7a8ba8;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --red: #ef4444;
+    --blue: #3b82f6;
+    --accent: #6366f1;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  /* ── Login ── */
+  #login-screen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+  }
+
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 40px;
+    width: 340px;
+    text-align: center;
+  }
+
+  .login-card h1 { font-size: 22px; margin-bottom: 6px; }
+  .login-card p  { color: var(--muted); margin-bottom: 24px; font-size: 13px; }
+
+  input[type="password"], input[type="text"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 10px 14px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  input:focus { border-color: var(--accent); }
+
+  button {
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 20px;
+    transition: opacity .15s, background .15s;
+  }
+  button:hover { opacity: .85; }
+
+  .btn-primary { background: var(--accent); color: #fff; width: 100%; margin-top: 12px; }
+  .btn-danger  { background: var(--red);    color: #fff; padding: 6px 14px; font-size: 12px; }
+  .btn-lift    { background: var(--green);  color: #fff; padding: 5px 12px; font-size: 12px; }
+  .btn-action  { background: var(--blue);   color: #fff; padding: 5px 12px; font-size: 12px; }
+  .btn-warn    { background: var(--yellow); color: #000; padding: 5px 12px; font-size: 12px; }
+
+  /* ── Dashboard ── */
+  #dashboard { display: none; }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  header .brand { font-size: 18px; font-weight: 700; letter-spacing: -.3px; }
+  header .brand span { color: var(--accent); }
+
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .last-updated { color: var(--muted); font-size: 12px; }
+
+  main { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+  /* ── Grid ── */
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+
+  @media (max-width: 900px) {
+    .grid-4 { grid-template-columns: repeat(2, 1fr); }
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 500px) {
+    .grid-4 { grid-template-columns: 1fr; }
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+
+  .card-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  /* ── Stat tiles ── */
+  .stat-value { font-size: 32px; font-weight: 700; line-height: 1; }
+  .stat-label { color: var(--muted); font-size: 12px; margin-top: 4px; }
+
+  /* ── Overview card ── */
+  .overview-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .overview-item .ov-label { color: var(--muted); font-size: 12px; }
+  .overview-item .ov-value { font-size: 16px; font-weight: 600; margin-top: 2px; }
+
+  /* ── Status badge ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .badge-green  { background: rgba(34,197,94,.15);  color: var(--green); }
+  .badge-yellow { background: rgba(234,179,8,.15);  color: var(--yellow); }
+  .badge-red    { background: rgba(239,68,68,.15);  color: var(--red); }
+
+  /* ── Subsystem rows ── */
+  .subsystem-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .subsystem-row:last-child { border-bottom: none; }
+  .sub-name { font-weight: 600; }
+  .sub-detail { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .sub-right { text-align: right; }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  th {
+    text-align: left;
+    padding: 8px 12px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  .mono { font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; color: var(--muted); }
+
+  .empty-row td { text-align: center; color: var(--muted); padding: 24px; }
+
+  /* ── Section spacing ── */
+  .section { margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<!-- ── Login Screen ── -->
+<div id="login-screen">
+  <div class="login-card">
+    <h1>BigAvatar Cloud</h1>
+    <p>Enter your dashboard password to continue</p>
+    <input type="password" id="pass-input" placeholder="Password" autocomplete="current-password">
+    <button class="btn-primary" onclick="doLogin()">Sign In</button>
+    <p id="login-error" style="color:var(--red);margin-top:12px;font-size:13px;display:none;">Incorrect password</p>
+  </div>
+</div>
+
+<!-- ── Dashboard ── -->
+<div id="dashboard">
+  <header>
+    <div class="brand">Big<span>Avatar</span> Cloud</div>
+    <div class="header-right">
+      <span class="last-updated" id="last-updated">—</span>
+      <button class="btn-danger" onclick="doLogout()">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Row 1: Overview + Stats -->
+    <div class="grid-2">
+      <!-- Server Overview -->
+      <div class="card section">
+        <div class="card-title">Server Overview</div>
+        <div class="overview-grid">
+          <div class="overview-item">
+            <div class="ov-label">Zone</div>
+            <div class="ov-value" id="ov-zone">—</div>
+          </div>
+          <div class="overview-item">
+            <div class="ov-label">Status</div>
+            <div id="ov-status">—</div>
+          </div>
+          <div class="overview-item">
+            <div class="ov-label">Uptime</div>
+            <div class="ov-value" id="ov-uptime">—</div>
+          </div>
+          <div class="overview-item">
+            <div class="ov-label">RAM Usage</div>
+            <div class="ov-value" id="ov-ram">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistics -->
+      <div class="card section">
+        <div class="card-title">Statistics</div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;">
+          <div>
+            <div class="stat-value" id="stat-online">—</div>
+            <div class="stat-label">Online Players</div>
+          </div>
+          <div>
+            <div class="stat-value" id="stat-logins">—</div>
+            <div class="stat-label">Total Logins</div>
+          </div>
+          <div>
+            <div class="stat-value" id="stat-uploads">—</div>
+            <div class="stat-label">Total Uploads</div>
+          </div>
+          <div>
+            <div class="stat-value" id="stat-mb">—</div>
+            <div class="stat-label">Total MB Uploaded</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Subsystems -->
+    <div class="card section">
+      <div class="card-title">Subsystems</div>
+      <div id="subsystems">
+        <div class="subsystem-row">
+          <div>
+            <div class="sub-name">Redis</div>
+            <div class="sub-detail" id="sub-redis-detail">—</div>
+          </div>
+          <div class="sub-right" id="sub-redis-badge">—</div>
+        </div>
+        <div class="subsystem-row">
+          <div>
+            <div class="sub-name">Disk</div>
+            <div class="sub-detail" id="sub-disk-detail">—</div>
+          </div>
+          <div class="sub-right" id="sub-disk-badge">—</div>
+        </div>
+        <div class="subsystem-row">
+          <div>
+            <div class="sub-name">WebSocket</div>
+            <div class="sub-detail" id="sub-ws-detail">—</div>
+          </div>
+          <div class="sub-right" id="sub-ws-badge">—</div>
+        </div>
+        <div class="subsystem-row">
+          <div>
+            <div class="sub-name">Upload Queue</div>
+            <div class="sub-detail" id="sub-upload-detail">—</div>
+          </div>
+          <div class="sub-right" id="sub-upload-badge">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: Online Players -->
+    <div class="card section">
+      <div class="card-title">Online Players (<span id="players-count">0</span>)</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>UUID</th>
+              <th>Last Active</th>
+              <th>Sockets</th>
+              <th>Last Upload</th>
+            </tr>
+          </thead>
+          <tbody id="players-tbody">
+            <tr class="empty-row"><td colspan="5">No players online</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Row 4: Active Bans -->
+    <div class="card section">
+      <div class="card-title">Active Bans (<span id="bans-count">0</span>)</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Client ID</th>
+              <th>Expires At</th>
+              <th>Violations</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="bans-tbody">
+            <tr class="empty-row"><td colspan="4">No active bans</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Row 5: Backups -->
+    <div class="card section">
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Backups (<span id="backups-count">0</span>)</span>
+        <button class="btn-action" onclick="createBackup(this)">+ Create Backup</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Filename</th>
+              <th>Created At</th>
+              <th>Files</th>
+              <th>Size</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="backups-tbody">
+            <tr class="empty-row"><td colspan="5">No backups found</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Row 6: Avatar Versions -->
+    <div class="card section">
+      <div class="card-title">Avatar Versions</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <input type="text" id="versions-uuid-input" placeholder="Player UUID" style="flex:1;">
+        <button class="btn-action" onclick="loadVersions()">Search</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Version ID</th>
+              <th>Created At</th>
+              <th>Size</th>
+              <th>Hash</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="versions-tbody">
+            <tr class="empty-row"><td colspan="5">Enter a UUID above to search</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Row 7: Metrics / Alert States -->
+    <div class="card section">
+      <div class="card-title">Metrics &amp; Alert States</div>
+      <div id="metrics-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+        <div class="card" style="background:var(--surface2);">
+          <div class="card-title">RAM Usage</div>
+          <div id="metric-ram-pct" class="stat-value">—</div>
+          <div id="metric-ram-state" style="margin-top:6px;">—</div>
+        </div>
+        <div class="card" style="background:var(--surface2);">
+          <div class="card-title">Disk Free</div>
+          <div id="metric-disk-free" class="stat-value">—</div>
+          <div id="metric-disk-state" style="margin-top:6px;">—</div>
+        </div>
+        <div class="card" style="background:var(--surface2);">
+          <div class="card-title">Redis Status</div>
+          <div id="metric-redis-status" class="stat-value">—</div>
+          <div id="metric-redis-state" style="margin-top:6px;">—</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  // ── Auth ──────────────────────────────────────────────────────────────────
+
+  function getPass() { return localStorage.getItem('dashPass'); }
+
+  function doLogin() {
+    const val = document.getElementById('pass-input').value.trim();
+    if (!val) return;
+    localStorage.setItem('dashPass', val);
+    document.getElementById('login-error').style.display = 'none';
+    init();
+  }
+
+  function doLogout() {
+    localStorage.removeItem('dashPass');
+    location.reload();
+  }
+
+  document.getElementById('pass-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  function badge(level) {
+    const map = { healthy: 'green', degraded: 'yellow', unhealthy: 'red', ok: 'green', warn: 'yellow', error: 'red' };
+    const color = map[level] || 'yellow';
+    const label = level.charAt(0).toUpperCase() + level.slice(1);
+    return `<span class="badge badge-${color}">${label}</span>`;
+  }
+
+  function fmtUptime(seconds) {
+    if (seconds == null) return '—';
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    if (d > 0) return `${d}d ${h}h ${m}m`;
+    if (h > 0) return `${h}h ${m}m ${s}s`;
+    return `${m}m ${s}s`;
+  }
+
+  function fmtTime(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = Math.floor((now - d) / 1000);
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+    return d.toLocaleTimeString();
+  }
+
+  function fmtBytes(bytes) {
+    if (!bytes) return '0 B';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/1048576).toFixed(2) + ' MB';
+  }
+
+  function truncate(str, n) {
+    if (!str) return '—';
+    return str.length > n ? str.slice(0, n) + '…' : str;
+  }
+
+  function setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+
+  function setHTML(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = val;
+  }
+
+  // ── Fetch helpers ─────────────────────────────────────────────────────────
+
+  async function apiFetch(url) {
+    const r = await fetch(url);
+    if (r.status === 403) {
+      // Wrong password
+      localStorage.removeItem('dashPass');
+      location.reload();
+    }
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  function renderStats(stats) {
+    setText('ov-zone', stats.zone || '—');
+    setText('ov-uptime', fmtUptime(stats.uptime));
+    setText('ov-ram', stats.ramUsageMB ? stats.ramUsageMB + ' MB' : '—');
+    setText('stat-logins', (stats.totalLogins ?? '—').toLocaleString());
+    setText('stat-uploads', (stats.totalUploads ?? '—').toLocaleString());
+    setText('stat-mb', stats.totalBytesMB ? parseFloat(stats.totalBytesMB).toLocaleString(undefined, {maximumFractionDigits:2}) : '—');
+  }
+
+  function renderHealth(health) {
+    // Status badge
+    setHTML('ov-status', badge(health.status || 'unknown'));
+
+    // Redis
+    const redis = health.redis || {};
+    const redisStatus = redis.status || 'unknown';
+    const redisLatency = redis.latencyMs != null ? `${redis.latencyMs} ms latency` : 'not connected';
+    setText('sub-redis-detail', redisLatency);
+    setHTML('sub-redis-badge', badge(redisStatus === 'connected' ? 'healthy' : redisStatus === 'degraded' ? 'degraded' : 'unhealthy'));
+
+    // Disk
+    const disk = health.disk || {};
+    const diskFreeGB = disk.freeBytes != null ? (disk.freeBytes / 1073741824).toFixed(2) + ' GB free' : '—';
+    setText('sub-disk-detail', diskFreeGB);
+    setHTML('sub-disk-badge', badge(disk.status || 'unknown'));
+
+    // WebSocket
+    const ws = health.websocket || health.ws || {};
+    const wsConns = ws.connections != null ? ws.connections : (health.wsConnections ?? '—');
+    setText('sub-ws-detail', wsConns + ' connections');
+    setHTML('sub-ws-badge', badge(ws.status || 'healthy'));
+
+    // Upload
+    const upload = health.upload || {};
+    const pending = upload.pending != null ? upload.pending : (upload.queueDepth ?? '—');
+    setText('sub-upload-detail', pending + ' pending');
+    setHTML('sub-upload-badge', badge(upload.status || 'healthy'));
+  }
+
+  function renderOnlinePlayers(data) {
+    const users = data.users || [];
+    setText('players-count', data.count ?? users.length);
+    setText('stat-online', data.count ?? users.length);
+
+    const tbody = document.getElementById('players-tbody');
+    if (!users.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No players online</td></tr>';
+      return;
+    }
+    tbody.innerHTML = users.map(u => `
+      <tr>
+        <td><strong>${escHtml(u.username || '—')}</strong></td>
+        <td class="mono">${truncate(u.uuid || '', 18)}</td>
+        <td>${fmtTime(u.lastAccess)}</td>
+        <td>${u.activeSockets ?? 0}</td>
+        <td>${fmtBytes(u.lastSize)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderBans(bans) {
+    setText('bans-count', bans.length);
+    const tbody = document.getElementById('bans-tbody');
+    if (!bans.length) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="4">No active bans</td></tr>';
+      return;
+    }
+    tbody.innerHTML = bans.map(b => `
+      <tr>
+        <td class="mono">${escHtml(b.clientId || b.id || '—')}</td>
+        <td>${b.expiresAt ? new Date(b.expiresAt).toLocaleString() : (b.expires ? new Date(b.expires).toLocaleString() : 'Permanent')}</td>
+        <td>${b.violations ?? b.count ?? '—'}</td>
+        <td><button class="btn-lift" onclick="liftBan('${escAttr(b.clientId || b.id || '')}', this)">Lift Ban</button></td>
+      </tr>
+    `).join('');
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escAttr(s) {
+    return String(s).replace(/'/g,'&#39;').replace(/"/g,'&quot;');
+  }
+
+  // ── Lift ban ──────────────────────────────────────────────────────────────
+
+  async function liftBan(clientId, btn) {
+    if (!clientId) return;
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      const r = await fetch(`/admin/bans/${encodeURIComponent(clientId)}`, { method: 'DELETE' });
+      if (r.ok) {
+        btn.closest('tr').remove();
+        const countEl = document.getElementById('bans-count');
+        countEl.textContent = Math.max(0, parseInt(countEl.textContent) - 1);
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Lift Ban';
+        alert('Failed to lift ban');
+      }
+    } catch {
+      btn.disabled = false;
+      btn.textContent = 'Lift Ban';
+      alert('Network error');
+    }
+  }
+
+  // ── Backups ───────────────────────────────────────────────────────────────
+
+  async function loadBackups() {
+    const pass = getPass();
+    try {
+      const backups = await apiFetch(`/admin/backups?pass=${encodeURIComponent(pass)}`);
+      const list = Array.isArray(backups) ? backups : (backups.backups || []);
+      setText('backups-count', list.length);
+      const tbody = document.getElementById('backups-tbody');
+      if (!list.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No backups found</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(b => `
+        <tr>
+          <td class="mono">${escHtml(b.filename || b.id || '—')}</td>
+          <td>${b.createdAt ? new Date(b.createdAt).toLocaleString() : '—'}</td>
+          <td>${b.fileCount ?? '—'}</td>
+          <td>${fmtBytes(b.sizeBytes)}</td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn-action" onclick="restoreBackup('${escAttr(b.id || b.filename || '')}', this)">Restore</button>
+            <button class="btn-danger" onclick="deleteBackup('${escAttr(b.id || b.filename || '')}', this)">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      console.error('loadBackups error', e);
+    }
+  }
+
+  async function createBackup(btn) {
+    const pass = getPass();
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      const r = await fetch(`/admin/backups?pass=${encodeURIComponent(pass)}`, { method: 'POST' });
+      if (r.ok) {
+        await loadBackups();
+      } else {
+        alert('Backup failed');
+      }
+    } catch {
+      alert('Network error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '+ Create Backup';
+    }
+  }
+
+  async function restoreBackup(backupId, btn) {
+    if (!confirm(`Restore backup "${backupId}"? This will overwrite current avatars.`)) return;
+    const pass = getPass();
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      const r = await fetch(`/admin/backups/${encodeURIComponent(backupId)}/restore?pass=${encodeURIComponent(pass)}`, { method: 'POST' });
+      if (r.ok) {
+        alert('Restore complete.');
+      } else {
+        const j = await r.json().catch(() => ({}));
+        alert('Restore failed: ' + (j.error || r.status));
+      }
+    } catch {
+      alert('Network error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Restore';
+    }
+  }
+
+  async function deleteBackup(backupId, btn) {
+    if (!confirm(`Delete backup "${backupId}"?`)) return;
+    const pass = getPass();
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      const r = await fetch(`/admin/backups/${encodeURIComponent(backupId)}?pass=${encodeURIComponent(pass)}`, { method: 'DELETE' });
+      if (r.ok) {
+        btn.closest('tr').remove();
+        const countEl = document.getElementById('backups-count');
+        countEl.textContent = Math.max(0, parseInt(countEl.textContent) - 1);
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+        alert('Delete failed');
+      }
+    } catch {
+      btn.disabled = false;
+      btn.textContent = 'Delete';
+      alert('Network error');
+    }
+  }
+
+  // ── Avatar Versions ───────────────────────────────────────────────────────
+
+  let versionsCurrentUuid = '';
+
+  async function loadVersions() {
+    const uuid = document.getElementById('versions-uuid-input').value.trim();
+    if (!uuid) return;
+    versionsCurrentUuid = uuid;
+    const tbody = document.getElementById('versions-tbody');
+    tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Loading…</td></tr>';
+    try {
+      const data = await apiFetch(`/api/${encodeURIComponent(uuid)}/versions`);
+      const versions = data.versions || [];
+      if (!versions.length) {
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No versions found</td></tr>';
+        return;
+      }
+      tbody.innerHTML = versions.map(v => `
+        <tr>
+          <td class="mono">${escHtml(v.id || v.versionId || '—')}</td>
+          <td>${v.createdAt ? new Date(v.createdAt).toLocaleString() : '—'}</td>
+          <td>${fmtBytes(v.sizeBytes || v.size)}</td>
+          <td class="mono" title="${escAttr(v.hash || '')}">${truncate(v.hash || '—', 16)}</td>
+          <td><button class="btn-action" onclick="restoreVersion('${escAttr(v.id || v.versionId || '')}', this)">Restore</button></td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Error loading versions</td></tr>';
+      console.error('loadVersions error', e);
+    }
+  }
+
+  async function restoreVersion(versionId, btn) {
+    if (!confirm(`Restore version "${versionId}" for ${versionsCurrentUuid}?`)) return;
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      // Admin restore uses the versioning endpoint — requires auth token.
+      // Since dashboard has no user token, we surface a note.
+      alert('Version restore requires a valid player auth token. Use the /api/avatar/versions/:id/restore endpoint with the player\'s token.');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Restore';
+    }
+  }
+
+  // ── Metrics / Alert States ────────────────────────────────────────────────
+
+  function renderMetrics(health, stats) {
+    if (!health) return;
+
+    // RAM %
+    const heapUsed = health.memory && health.memory.heapUsed;
+    const heapTotal = health.memory && health.memory.heapTotal;
+    const ramPct = heapTotal ? ((heapUsed / heapTotal) * 100).toFixed(1) : null;
+    const ramThreshold = 85; // matches default ALERT_RAM_THRESHOLD=0.85
+    setText('metric-ram-pct', ramPct != null ? ramPct + '%' : '—');
+    const ramAlert = ramPct != null && parseFloat(ramPct) > ramThreshold;
+    setHTML('metric-ram-state', badge(ramAlert ? 'degraded' : 'healthy'));
+
+    // Disk free
+    const freeBytes = health.disk && health.disk.freeBytes;
+    const diskThreshBytes = 524288000; // 500 MB
+    setText('metric-disk-free', freeBytes != null ? fmtBytes(freeBytes) : '—');
+    const diskAlert = freeBytes != null && freeBytes < diskThreshBytes;
+    setHTML('metric-disk-state', badge(diskAlert ? 'degraded' : 'healthy'));
+
+    // Redis
+    const redisStatus = health.redis && health.redis.status;
+    setText('metric-redis-status', redisStatus || '—');
+    setHTML('metric-redis-state', badge(
+      redisStatus === 'healthy' ? 'healthy' :
+      redisStatus === 'degraded' ? 'degraded' : 'unhealthy'
+    ));
+  }
+
+  // ── Refresh loop ──────────────────────────────────────────────────────────
+
+  let refreshTimer = null;
+
+  async function refresh() {
+    const pass = getPass();
+    if (!pass) return;
+
+    try {
+      const [stats, health, onlineUsers, bans, backups] = await Promise.allSettled([
+        apiFetch(`/api/server-stats?pass=${encodeURIComponent(pass)}`),
+        apiFetch('/health'),
+        apiFetch(`/api/online-users?pass=${encodeURIComponent(pass)}`),
+        apiFetch('/admin/bans'),
+        apiFetch(`/admin/backups?pass=${encodeURIComponent(pass)}`),
+      ]);
+
+      if (stats.status === 'fulfilled')       renderStats(stats.value);
+      if (health.status === 'fulfilled')      renderHealth(health.value);
+      if (onlineUsers.status === 'fulfilled') renderOnlinePlayers(onlineUsers.value);
+      if (bans.status === 'fulfilled')        renderBans(Array.isArray(bans.value) ? bans.value : (bans.value.bans || []));
+
+      // Backups (only re-render if not currently editing)
+      if (backups.status === 'fulfilled') {
+        const list = Array.isArray(backups.value) ? backups.value : (backups.value.backups || []);
+        setText('backups-count', list.length);
+        const tbody = document.getElementById('backups-tbody');
+        if (!list.length) {
+          tbody.innerHTML = '<tr class="empty-row"><td colspan="5">No backups found</td></tr>';
+        } else {
+          tbody.innerHTML = list.map(b => `
+            <tr>
+              <td class="mono">${escHtml(b.filename || b.id || '—')}</td>
+              <td>${b.createdAt ? new Date(b.createdAt).toLocaleString() : '—'}</td>
+              <td>${b.fileCount ?? '—'}</td>
+              <td>${fmtBytes(b.sizeBytes)}</td>
+              <td style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="btn-action" onclick="restoreBackup('${escAttr(b.id || b.filename || '')}', this)">Restore</button>
+                <button class="btn-danger" onclick="deleteBackup('${escAttr(b.id || b.filename || '')}', this)">Delete</button>
+              </td>
+            </tr>
+          `).join('');
+        }
+      }
+
+      // Metrics
+      const healthVal = health.status === 'fulfilled' ? health.value : null;
+      const statsVal  = stats.status  === 'fulfilled' ? stats.value  : null;
+      renderMetrics(healthVal, statsVal);
+
+      const now = new Date();
+      setText('last-updated', `Last updated: ${now.toLocaleTimeString()}`);
+    } catch (e) {
+      console.error('Refresh error', e);
+    }
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+
+  async function init() {
+    const pass = getPass();
+    if (!pass) {
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('dashboard').style.display = 'none';
+      return;
+    }
+
+    // Quick auth check
+    try {
+      await apiFetch(`/api/server-stats?pass=${encodeURIComponent(pass)}`);
+    } catch {
+      document.getElementById('login-error').style.display = 'block';
+      localStorage.removeItem('dashPass');
+      return;
+    }
+
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+
+    await refresh();
+    clearInterval(refreshTimer);
+    refreshTimer = setInterval(refresh, 3000);
+  }
+
+  init();
+</script>
+</body>
+</html>
